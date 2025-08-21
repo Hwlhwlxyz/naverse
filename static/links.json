@@ -1,0 +1,12 @@
+[
+  { "title": "Google", "url": "https://www.google.com" },
+  { "title": "Bing", "url": "https://www.bing.com" },
+  { "title": "Yahoo", "url": "https://www.yahoo.com" },
+  { "title": "Baidu", "url": "https://www.baidu.com" },
+  { "title": "Yandex", "url": "https://www.yandex.com" },
+  { "title": "DuckDuckGo", "url": "https://duckduckgo.com" },
+  { "title": "Naver", "url": "https://www.naver.com" },
+  { "title": "Ecosia", "url": "https://www.ecosia.org" },
+  { "title": "Startpage", "url": "https://www.startpage.com" },
+  { "title": "Qwant", "url": "https://www.qwant.com" }
+]
