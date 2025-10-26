@@ -89,12 +89,12 @@
   <div class="outer-container">
     <div class="card-grid">
       {#each filteredLinks as link}
-        <a
-          href={link.fullUrl}
-          class="card-link-button"
-          rel="noopener noreferrer"
-        >
-          <div class="card compact-card">
+        <div class="compact-card">
+          <a
+            href={link.fullUrl}
+            class="card-link-button"
+            rel="noopener noreferrer"
+          >
             <div class="card-content is-flex is-align-items-center py-2 px-2">
               <figure class="image is-24x24 mr-2">
                 <Favicon url={link.fullUrl} />
@@ -103,8 +103,11 @@
                 {link.title}
               </p>
             </div>
-          </div>
-        </a>
+          </a>
+          {#if link.description}
+            <p class="is-flex is-align-items-center py-2 px-2">{link.description}</p>
+          {/if}
+        </div>
       {/each}
     </div>
   </div>
