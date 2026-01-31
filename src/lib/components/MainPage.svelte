@@ -1,175 +1,108 @@
 <script>
   import { onMount } from "svelte";
-  import Favicon from "./Favicon.svelte";
+  import LinkCardGrid from "./LinkCardGrid.svelte";
+  import Sidebar from "./Sidebar.svelte";
 
   let searchTerm = "";
   /**
-   * @type {any[]}
-   *
-   * @example
-   * [
-   *  { "title": "Google", "url": "https://www.google.com" },
-   *  { "title": "本地服务 (同端口)", "url": "/api" },
-   *  { "title": "另一个端口服务", "url": ":8080/api" },
-   *  { "title": "远程测试", "url": "http://192.168.1.100:9090/dashboard" }
-   * ]
+   * 从 links.json 解析后的链接列表（仅含 title、url、tag，fullUrl 由 LinkCardGrid 内计算）
+   * @type {Array<{ title: string; url: string; description?: string; tag: string }>}
    */
   let links = [];
-
-  /**
-   * @param {string} rawUrl
-   */
-  function buildFullUrl(rawUrl) {
-    // 情况 1：绝对 URL（http/https 开头）
-    if (/^https?:\/\//i.test(rawUrl)) {
-      return rawUrl;
-    }
-
-    // 情况 2：相对路径（/开头）
-    if (rawUrl.startsWith("/")) {
-      return `${window.location.origin}${rawUrl}`;
-    }
-
-    // 情况 3：可选端口写法（例如 ":8080/api"）
-    if (rawUrl.startsWith(":")) {
-      const [port, ...rest] = rawUrl.split("/");
-      const path = rest.length ? `/${rest.join("/")}` : "";
-      return `${window.location.protocol}//${window.location.hostname}${port}${path}`;
-    }
-
-    // 兜底：原样返回
-    return rawUrl;
-  }
+  /** @type {Record<string, Array<{ title: string; url: string; description?: string }>>} */
+  let inputData = {};
+  /** 侧边栏是否展开 */
+  let sidebarOpen = true;
 
   onMount(async () => {
     try {
       const res = await fetch("/links.json");
-      let data = await res.json();
-      console.log(data);
-      // 构建 fullUrl
-      links = data.map((/** @type {{ url: string; }} */ link) => ({
-        ...link,
-        fullUrl: buildFullUrl(link.url),
-      }));
-      console.log(links);
+      /** @type {Record<string, Array<{ title: string; url: string; description?: string }>>} */
+      const data = await res.json();
+      inputData = data;
+      // 新格式：{ "tag名称": [ { title, url, description? }, ... ], ... }
+      links = Object.entries(data).flatMap(([tag, linkList]) =>
+        linkList.map((link) => ({ ...link, tag })),
+      );
     } catch (err) {
       console.error("加载 links.json 出错:", err);
     }
   });
 
-  $: filteredLinks = links.filter((link) =>
-    link.title.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
 </script>
 
-<div class="container block" style="height: 10%;"></div>
+<Sidebar tags={Object.keys(inputData)} bind:open={sidebarOpen} />
+<div class="page-content" class:sidebar-closed={!sidebarOpen}>
+  <div class="container block" style="height: 10%;"></div>
 
-<div class="container is-widescreen block">
-  <div class="title is-primary has-text-centered">NaVerse</div>
-</div>
+  <div class="container is-widescreen block">
+    <div class="title is-primary has-text-centered">NaVerse</div>
+  </div>
 
-<div id="main_input" class="container block is-widescreen">
-  <div class="columns is-centered is-vcentered is-mobile px-4">
-    <div class="column is-8-tablet is-6-desktop is-flex">
-      <input
-        class="input is-primary mr-2"
-        type="text"
-        placeholder="search"
-        style="flex: 1;"
-        bind:value={searchTerm}
-      />
-      <button class="button is-primary"> Search </button>
+  <div id="main_input" class="container block is-widescreen">
+    <div class="columns is-centered is-vcentered is-mobile px-4">
+      <div class="column is-8-tablet is-6-desktop is-flex">
+        <input
+          class="input is-primary mr-2"
+          type="text"
+          placeholder="search"
+          style="flex: 1;"
+          bind:value={searchTerm}
+        />
+        <button class="button is-primary"> Search </button>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="container block is-widescreen">
-  <!--  -->
-
-  <div class="outer-container">
-    <div class="card-grid">
-      {#each filteredLinks as link}
-        <div class="compact-card">
-          <a
-            href={link.fullUrl}
-            class="card-link-button"
-            rel="noopener noreferrer"
-          >
-            <div class="card-content is-flex is-align-items-center py-2 px-2">
-              <figure class="image is-24x24 mr-2">
-                <Favicon url={link.fullUrl} />
-              </figure>
-              <p class="is-size-5 has-text-weight-semibold mb-0 truncate-text">
-                {link.title}
-              </p>
-            </div>
-          </a>
-          {#if link.description}
-            <p class="is-flex is-align-items-center py-2 px-2">{link.description}</p>
-          {/if}
+  <main class="main-content">
+    {#each Object.entries(inputData) as [key, value]}
+      <section class="tag-section" id={key}>
+        <h1 class="tag-heading">{key}</h1>
+        <div class="container block is-widescreen">
+          <LinkCardGrid links={value} {searchTerm} />
         </div>
-      {/each}
-    </div>
-  </div>
+      </section>
+    {/each}
+  </main>
 </div>
 
 <style>
-  .outer-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 12px;
+  .page-content {
+    margin-left: 240px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    transition: margin-left 0.2s ease;
     box-sizing: border-box;
   }
 
-  .card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-    gap: 12px;
-    justify-items: center;
-    padding: 0 12px;
-    box-sizing: border-box;
+  .page-content.sidebar-closed {
+    margin-left: 36px;
+  }
+
+  .main-content {
+    flex: 1;
+    min-width: 0;
     max-width: 1200px;
     margin: 0 auto;
   }
 
-  .card-link-button {
-    display: block;
-    color: inherit;
-    text-decoration: none;
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-  .card-link-button:hover .compact-card {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  .tag-section {
+    margin-bottom: 2.5rem;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    box-sizing: border-box;
   }
 
-  .compact-card {
-    border-radius: 6px;
-    border: 1px solid #e0e0e0;
-    padding: 0.25rem 0.5rem;
-    transition: all 0.2s ease-in-out;
-  }
-
-  /* 限制标题溢出 */
-  .truncate-text {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .card-link-button {
-    min-width: 230px;
-    max-width: 300px;
-    display: block;
-    text-decoration: none;
-    color: inherit;
-    text-decoration: none;
-    display: block;
-    color: inherit;
-    transition:
-      transform 0.2s ease,
-      box-shadow 0.2s ease;
+  .tag-heading {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #363636;
+    margin: 0 0 1rem 0;
+    padding: 0.5rem 0 0.75rem;
+    border-bottom: 2px solid #dbdbdb;
+    letter-spacing: 0.02em;
   }
 </style>
